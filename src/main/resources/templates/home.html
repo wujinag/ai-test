@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Spring Boot Thymeleaf</title>
+</head>
+<body>
+<table border="1">
+    <tr>
+        <th>编号</th>
+        <th>用户名</th>
+        <th>电话</th>
+    </tr>
+    <tr  th:each="item:${users}" >
+        <td th:text="${item.id}"></td>
+        <td th:text="${item.name}"></td>
+        <th th:text="${item.phone}"></th>
+    </tr>
+</table>
+</body>
+</html>
