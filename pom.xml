@@ -16,6 +16,7 @@
 	<properties>
 		<java.version>8</java.version>
 		<spring-cloud.version>2021.0.3</spring-cloud.version>
+		<camunda.version>7.18.0</camunda.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -68,6 +69,26 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-websocket</artifactId>
 		</dependency>
+
+		<!--camunda流程引擎 -->
+		<dependency>
+			<groupId>org.camunda.bpm.springboot</groupId>
+			<artifactId>camunda-bpm-spring-boot-starter</artifactId>
+			<version>${camunda.version}</version>
+		</dependency>
+		<!--camunda Web管理平台 -->
+		<dependency>
+			<groupId>org.camunda.bpm.springboot</groupId>
+			<artifactId>camunda-bpm-spring-boot-starter-webapp</artifactId>
+			<version>${camunda.version}</version>
+		</dependency>
+		<!--camunda rest api操作接口包 -->
+		<dependency>
+			<groupId>org.camunda.bpm.springboot</groupId>
+			<artifactId>camunda-bpm-spring-boot-starter-rest</artifactId>
+			<version>${camunda.version}</version>
+		</dependency>
+
 
 
 
