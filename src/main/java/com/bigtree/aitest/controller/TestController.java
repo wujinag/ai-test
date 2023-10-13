@@ -6,12 +6,15 @@ import com.bigtree.aitest.thread.compleFutureMergeReqDemo.Request;
 import com.bigtree.aitest.thread.compleFutureMergeReqDemo.UserService;
 import com.bigtree.aitest.thread.compleFutureMergeReqDemo.UserWrapBatchService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
@@ -58,7 +61,7 @@ public class TestController {
         request.setRequestId(UUID.randomUUID().toString().replace("-", ""));
         request.setUserId(userId);
         userReqs.add(request);
-        return userService.queryUserByIdBatch(userReqs).get(0);
+        return userService.queryUserByIdBatch(userReqs).get(request.getRequestId());
     }
 
 }

@@ -1,6 +1,7 @@
 package com.bigtree.aitest.thread.compleFutureMergeReqDemo;
 
 import com.bigtree.aitest.domain.ActIdUser;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +20,7 @@ import java.util.concurrent.*;
  * @version: 1.0
  */
 @Service
+@Slf4j
 public class UserWrapBatchService {
 
     @Autowired
@@ -35,23 +37,26 @@ public class UserWrapBatchService {
      而LinkedBlockingQueue实现的队列中的锁是分离的，其添加采用的是putLock，移除采用的则是takeLock，这样能大大提高队列的吞吐量，
      也意味着在高并发的情况下生产者和消费者可以并行地操作队列中的数据，以此来提高整个队列的并发性能。
       */
-    private final Queue<Request> queue = new LinkedBlockingQueue<>();
+    private final Queue<Request> requestsStashQueue = new LinkedBlockingQueue<>();
 
     @PostConstruct
     public void init() {
+        //定时任务线程池,创建一个支持定时、周期性或延时任务的限定线程数目(这里传入的是1)的线程池
         ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
         scheduledExecutorService.scheduleAtFixedRate(() -> {
-            //System.out.println("====>执行定时任务，批量整合前端请求<==========");
-            int size = queue.size();
+            int size = requestsStashQueue.size();
+            //如果队列没数据,表示这段时间没有请求,直接返回
             if (size == 0) {
                 return;
             }
             //将队列的请求消费到一个集合保存
             List<Request> list = new ArrayList<>();
-            System.out.println("合并了[" + size + "]个请求");
+            log.info("================>合并了个请求:{}<==============================", size);
             for (int i = 0; i < size; i++) {
+                // 后面的SQL语句是有长度限制的，所以还要做限制每次批量的数量,超过最大任务数，等下次执行
+                ////Java 8 的 CompletableFuture 并没有 timeout 机制
                 if (i < MAX_TASK_NUM) {
-                    list.add(queue.poll());
+                    list.add(requestsStashQueue.poll());
                 }
             }
             //合并请求
@@ -59,13 +64,14 @@ public class UserWrapBatchService {
             list.forEach(e -> {
                 usersRqs.add(e);
             });
+            //将参数传入service处理, 这里是本地服务，也可以把userService 看成RPC之类的远程调用
             Map<String, ActIdUser> response = userService.queryUserByIdBatch(usersRqs);
-
             usersRqs.forEach(e -> {
                 ActIdUser user = response.get(e.getRequestId());
-                e.usersQueue.offer(user);
+                 //e.usersQueue.offer(user);
+                //completableFuture.complete方法完成赋值,这一步执行完毕,下面future.get()阻塞的请求可以继续执行了
+                e.getCompletableFuture().complete(user);
             });
-
         }, 100, 10, TimeUnit.MILLISECONDS);
 
     }
@@ -79,21 +85,32 @@ public class UserWrapBatchService {
      * 2023/10/10 14:05
      **/
     public ActIdUser queyUserById(Long userId) {
-
         Request request = new Request();
-        request.requestId = UUID.randomUUID().toString().replace("-", "");
-        request.userId = userId;
-//      CompletableFuture<ActIdUser> future = new CompletableFuture<>();
-//      request.completableFuture = future;
-        LinkedBlockingQueue<ActIdUser> usersQueue = new LinkedBlockingQueue<>();
-        request.usersQueue = usersQueue;
+        // 这里用UUID做请求id
+        request.setRequestId( UUID.randomUUID().toString().replace("-", ""));
+        request.setUserId(userId);
+        CompletableFuture<ActIdUser> future = new CompletableFuture<>();
+        request.setCompletableFuture(future);
         //将对象传入队列
-        queue.offer(request);
+        requestsStashQueue.offer(request);
+        //如果这时候没完成赋值,那么就会阻塞,直到能够拿到值
+        try {
+            return future.get(100,TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        } catch (TimeoutException e) {
+            throw new RuntimeException(e);
+        }
+        //java 8 的 CompletableFuture 并没有 timeout 机制，后面优化，使用了队列替代
+        /*LinkedBlockingQueue<ActIdUser> usersQueue = new LinkedBlockingQueue<>();
+        request.usersQueue = usersQueue;
         try {
             return usersQueue.poll(3000, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
             System.out.println("e = " + e);
-        }
+        }*/
         return null;
     }
 

@@ -33,7 +33,7 @@ public class UserServiceImpl implements UserService {
         Map<String, List<ActIdUser>> usersGroup = actIdUsers.stream().collect(Collectors.groupingBy(ActIdUser::getId_));
         Map<String, ActIdUser> result = new HashMap<>();
         userReqs.forEach(val->{
-            List<ActIdUser> actIdUsers1 = usersGroup.get(val.getUserId());
+            List<ActIdUser> actIdUsers1 = usersGroup.get(String.valueOf(val.getUserId()));
             if (actIdUsers1.isEmpty()) {
                 result.put(val.getRequestId(),new ActIdUser());
             }else {
